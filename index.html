@@ -21,49 +21,45 @@
     .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.4)}
 
     /* Game view */
-    .sky{height:320px;border-radius:10px;overflow:hidden;position:relative;background:linear-gradient(180deg,#8dd3ff 0%, #8cc1ff 30%, #c7b0ff 100%)}
+    .sky{height:360px;border-radius:10px;overflow:hidden;position:relative;background:linear-gradient(180deg,#8dd3ff 0%, #8cc1ff 30%, #c7b0ff 100%);border:1px solid rgba(255,255,255,0.05)}
     .cloud{position:absolute;background:white;border-radius:999px;opacity:0.9}
     .cloud.c1{width:140px;height:48px;left:20px;top:30px}
     .cloud.c2{width:100px;height:36px;right:10px;top:60px}
     .cloud.c3{width:160px;height:56px;left:60px;top:120px}
-    .ground{position:absolute;left:0;right:0;bottom:0;height:84px;background:linear-gradient(180deg,#73c8a9,#2ea36a);display:flex;align-items:center;justify-content:center}
 
-    /* jumper */
-    .jumper-wrap{position:absolute;left:46%;bottom:84px;height:160px;width:120px;display:flex;align-items:flex-end;justify-content:center}
+    .ground{position:absolute;left:0;right:0;bottom:0;height:64px;background:linear-gradient(180deg,#73c8a9,#2ea36a);display:flex;align-items:center;justify-content:center}
+
+    /* red danger line */
+    .redline{position:absolute;left:0;right:0;height:8px;background:#ff3b30;bottom:64px}
+
+    .jumper-wrap{position:absolute;left:46%;bottom:84px;height:160px;width:120px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
     .jumper{width:64px;height:64px;border-radius:50%;background:linear-gradient(180deg,#ffe0a6,#ffb870);box-shadow:0 8px 18px rgba(0,0,0,0.2);transform-origin:center bottom}
     .rope{position:absolute;left:50%;width:180px;height:2px;transform:translateX(-50%);bottom:70px}
-    .rope::before,.rope::after{content:'';position:absolute;top:-6px;width:6px;height:12px;background:#fff3;border-radius:6px}
-    .rope::before{left:0}
-    .rope::after{right:0}
+
     @keyframes jump{0%{transform:translateY(0)}20%{transform:translateY(-110px)}45%{transform:translateY(-130px)}70%{transform:translateY(-90px)}100%{transform:translateY(0)}}
 
-    /* input area */
+    /* falling words */
+    .falling-word{position:absolute;font-weight:800;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.95);box-shadow:0 6px 12px rgba(0,0,0,0.12);user-select:none}
+
     .words{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .word-pill{padding:8px 12px;border-radius:999px;background:#ffffffaa;font-weight:600}
-    .word-pill.active{outline:3px solid #ffd6e0;background:#fff}
 
     .controls{display:flex;gap:8px;margin-top:12px}
     button{border:0;padding:8px 10px;border-radius:9px;font-weight:600;cursor:pointer}
-    .btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.18)}
+    .btn-ghost{background:transparent;color:#111;border:1px solid rgba(0,0,0,0.06)}
     .btn-primary{background:#ffcc80;color:#111}
 
-    /* stats */
     .stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(0,0,0,0.05)}
     .big{font-size:20px;font-weight:800}
 
-    /* input bar */
     .typebox{margin-top:12px}
     input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.06);font-size:16px}
     input[type=range]{width:100%}
 
     footer{padding:12px 18px;font-size:13px;color:#fff9;background:linear-gradient(180deg,transparent,#00000010)}
 
-    /* small */
     .muted{color:#333}
     .small{font-size:12px;color:#222}
-    .controls .pill{background:#fff2;padding:8px 10px;border-radius:999px}
 
-    /* responsive */
     @media (max-width:780px){main{flex-direction:column}.right{width:100%}}
   </style>
 </head>
@@ -85,7 +81,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
               <div style="font-weight:800">Game</div>
-              <div class="small muted">Type the highlighted word to make the jumper skip!</div>
+              <div class="small muted">Type a falling word before it hits the red line. If it touches — you lose.</div>
             </div>
             <div style="text-align:right">
               <div style="font-weight:800" id="score">Score: 0</div>
@@ -98,7 +94,8 @@
             <div class="cloud c2"></div>
             <div class="cloud c3"></div>
 
-            <div class="jumper-wrap">
+            <div class="redline" id="redline"></div>
+            <div class="jumper-wrap" aria-hidden>
               <div class="rope" id="rope"></div>
               <div class="jumper" id="jumper" style="transform:translateY(0)"></div>
             </div>
@@ -107,12 +104,13 @@
           </div>
 
           <div class="typebox">
-            <div class="words" id="words"></div>
-            <input type="text" id="input" placeholder="Type here and press Space or Enter" autofocus autocomplete="off" />
+            <div class="words" id="wordsPreview"></div>
+            <input type="text" id="input" placeholder="Type any falling word and press Space/Enter" autocomplete="off" />
           </div>
 
           <div class="controls">
             <button class="btn-primary" id="startBtn">Start</button>
+            <button class="btn-ghost" id="stopBtn">Stop</button>
             <button class="btn-ghost" id="modeBtn">Mode: Endless</button>
             <div style="flex:1"></div>
             <div class="small muted">Level: <b id="levelLabel">1</b></div>
@@ -123,7 +121,7 @@
 
         <div class="card">
           <div style="font-weight:800">Word list (customize)</div>
-          <div class="small muted">You can add words separated by commas</div>
+          <div class="small muted">Add words separated by commas — these will fall in a loop.</div>
           <textarea id="customWords" style="width:100%;height:72px;margin-top:8px;border-radius:8px;padding:8px">adventure,mystery,spark,skip,sky,type,nova,cloud,star,friend</textarea>
           <div style="display:flex;gap:8px;margin-top:8px"><button id="applyWords" class="btn-ghost">Apply words</button><button id="resetWords" class="btn-ghost">Reset</button></div>
         </div>
@@ -137,14 +135,15 @@
           <div class="stat"><div>Best Streak</div><div id="bestStreak">0</div></div>
           <div class="stat"><div>Words Typed</div><div id="typedCount">0</div></div>
 
-          <div style="margin-top:10px;font-weight:800">Timer (seconds)</div>
-          <input type="range" id="timerRange" min="10" max="180" value="60" />
-          <div class="small muted">Time: <span id="timerLabel">60</span>s</div>
+          <div style="margin-top:10px;font-weight:800">Spawn settings</div>
+          <div class="small muted">Simultaneous falling words</div>
+          <input type="range" id="spawnRange" min="1" max="8" value="3" />
+          <div class="small muted">Spawn: <span id="spawnLabel">3</span></div>
 
           <div style="margin-top:12px;font-weight:800">Game Tips</div>
           <ul class="small muted">
             <li>Keep your fingers on the home row: ASDF / JKL;</li>
-            <li>Start slow. Accuracy first, speed follows.</li>
+            <li>Type the whole word exactly and press Space/Enter.</li>
             <li>Use the custom word box to practice tricky words.</li>
           </ul>
         </div>
@@ -153,7 +152,7 @@
 
         <div class="card">
           <div style="font-weight:800">Controls</div>
-          <div class="small muted">Start — Start/Pause the game. Type words and press Space/Enter to submit.</div>
+          <div class="small muted">Start — begin spawning falling words. Stop — pause the game. If a word touches the red line you lose and must press Start to play again.</div>
           <div style="height:8px"></div>
           <button id="exportBtn" class="btn-ghost">Export Score (copy)</button>
         </div>
@@ -164,138 +163,167 @@
   </div>
 
   <script>
-    // SkyType — single-file logic
-    const defaultWordsByLevel = {
-      1: ['cat','dog','sun','map','tree','sky','star','book','jump','run'],
-      2: ['apple','orange','river','cloud','magic','spark','nova','skipper','puzzle','happy'],
-      3: ['adventure','mystery','journey','imagine','favorite','rainbow','butterfly','mountain','whisper','treasure'],
-      4: ['imagination','extraordinary','congratulations','discovery','astonishing','companion','happiness','beautiful','incredible','enchantment']
-    };
-
-    const wordsEl = document.getElementById('words');
+    // SkyType — falling words version
+    const defaultWords = ['adventure','mystery','spark','skip','sky','type','nova','cloud','star','friend'];
+    const playArea = document.getElementById('playArea');
+    const redlineEl = document.getElementById('redline');
     const input = document.getElementById('input');
     const startBtn = document.getElementById('startBtn');
-    const modeBtn = document.getElementById('modeBtn');
-    const levelLabel = document.getElementById('levelLabel');
+    const stopBtn = document.getElementById('stopBtn');
+    const spawnRange = document.getElementById('spawnRange');
+    const spawnLabel = document.getElementById('spawnLabel');
+    const applyWords = document.getElementById('applyWords');
+    const customWords = document.getElementById('customWords');
+    const resetWords = document.getElementById('resetWords');
     const scoreEl = document.getElementById('score');
     const streakEl = document.getElementById('streak');
     const accuracyEl = document.getElementById('accuracy');
     const bestStreakEl = document.getElementById('bestStreak');
     const typedCountEl = document.getElementById('typedCount');
-    const timerRange = document.getElementById('timerRange');
-    const timerLabel = document.getElementById('timerLabel');
-    const jumper = document.getElementById('jumper');
-    const rope = document.getElementById('rope');
-    const applyWords = document.getElementById('applyWords');
-    const customWords = document.getElementById('customWords');
-    const resetWords = document.getElementById('resetWords');
-    const exportBtn = document.getElementById('exportBtn');
+    const levelLabel = document.getElementById('levelLabel');
+    const wordsPreview = document.getElementById('wordsPreview');
 
     let game = {
       running: false,
-      mode: 'endless', // or 'timed'
-      level: 1,
+      wordsPool: [...defaultWords],
+      wordIndex: 0,
+      falling: [],
+      spawnMax: 3,
       score: 0,
       streak: 0,
       bestStreak: 0,
       typed: 0,
       correct: 0,
-      wordsQueue: [],
-      currentWord: null,
-      spawnCount: 6,
-      timer: 60,
-      timeLeft: 60,
-      interval: null
-n    };
+      level: 1,
+      animationFrame: null,
+      spawnInterval: null
+    };
 
-    function setWordsFromCustom(){
+    function resetCustom(){ customWords.value = defaultWords.join(','); applyWordPool(); }
+    function applyWordPool(){
       const txt = customWords.value.trim();
-      if(!txt) return;
-      const list = txt.split(',').map(s=>s.trim()).filter(Boolean);
-      if(list.length) {
-        game.wordsPool = list;
-        renderWords();
-      }
+      const list = txt ? txt.split(',').map(s=>s.trim()).filter(Boolean) : [];
+      game.wordsPool = list.length ? list : [...defaultWords];
+      game.wordIndex = 0;
+      renderPreview();
     }
 
-    function resetCustom(){
-      customWords.value = 'adventure,mystery,spark,skip,sky,type,nova,cloud,star,friend';
-      setWordsFromCustom();
-    }
+    function renderPreview(){ wordsPreview.innerHTML=''; game.wordsPool.slice(0,8).forEach(w=>{ const d=document.createElement('div'); d.className='word-pill'; d.style.padding='6px 8px'; d.textContent=w; wordsPreview.appendChild(d); }); }
 
-    function chooseWord(){
-      const pool = game.wordsPool || defaultWordsByLevel[game.level] || defaultWordsByLevel[1];
-      return pool[Math.floor(Math.random()*pool.length)];
-    }
-
-    function renderWords(){
-      wordsEl.innerHTML='';
-      game.wordsQueue = [];
-      for(let i=0;i<game.spawnCount;i++){
-        const w = chooseWord();
-        game.wordsQueue.push(w);
-      }
-      game.currentWord = game.wordsQueue.shift();
-      game.wordsQueue.push(chooseWord());
-
-      game.wordsQueue.slice(0,6).forEach((w,idx)=>{
-        const d = document.createElement('div');
-        d.className = 'word-pill'+(idx===0? ' active':'');
-        d.textContent = idx===0? game.currentWord : w;
-        wordsEl.appendChild(d);
-      });
-    }
-
-    function updateHUD(){
-      scoreEl.textContent = 'Score: '+game.score;
-      streakEl.textContent = game.streak;
-      levelLabel.textContent = game.level;
-      accuracyEl.textContent = game.typed? Math.round((game.correct/game.typed)*100)+'%':'100%';
-      bestStreakEl.textContent = game.bestStreak;
-      typedCountEl.textContent = game.typed;
-      timerLabel.textContent = game.timeLeft;
-    }
-
-    function jumpAnimation(power=1){
-      // power 1..3 affects jump height/duration
-      jumper.style.animation = 'none';
-      void jumper.offsetWidth; // reflow
-      jumper.style.animation = 'jump 700ms cubic-bezier(.22,.9,.35,1)';
-      jumper.style.transform = 'translateY(-'+(60*power)+'px)';
-      setTimeout(()=>{ jumper.style.transform='translateY(0)'; jumper.style.animation='none'; },700);
-    }
-
-    function correctTyped(){
-      game.score += 10 + game.streak*2;
-      game.streak += 1;
-      game.correct += 1;
-      game.typed += 1;
-      if(game.streak>game.bestStreak) game.bestStreak = game.streak;
-      // advance word queue
-      game.currentWord = game.wordsQueue.shift();
-      game.wordsQueue.push(chooseWord());
-      renderWords();
-      jumpAnimation(Math.min(3,1 + Math.floor(game.streak/5)));
-    }
-
-    function wrongTyped(){
-      game.streak = 0;
-      game.typed += 1;
-      // small penalty
-      game.score = Math.max(0, game.score - 2);
-      // rope tangle animation (shake)
-      rope.style.transform = 'translateX(-50%) rotate(-6deg)';
-      setTimeout(()=>rope.style.transform='translateX(-50%) rotate(0deg)',200);
-    }
-
-    function submitWord(text){
+    function spawnWord(){
       if(!game.running) return;
-      const trimmed = text.trim();
-      if(!trimmed) return;
-      if(trimmed === game.currentWord){
-        correctTyped();
+      if(game.falling.length >= game.spawnMax) return;
+      const w = game.wordsPool[game.wordIndex];
+      game.wordIndex = (game.wordIndex + 1) % game.wordsPool.length; // loop endlessly
+
+      const el = document.createElement('div');
+      el.className = 'falling-word';
+      el.textContent = w;
+      playArea.appendChild(el);
+
+      // random horizontal position inside playArea, keeping padding
+      const pad = 12;
+      const areaW = playArea.clientWidth;
+      const x = Math.max(pad, Math.random()*(areaW - el.offsetWidth - pad));
+      el.style.left = x + 'px';
+      el.style.top = '-40px';
+
+      const speedBase = 20 + Math.random()*20; // px per second
+      const obj = {text: w, el, x, y: -40, speed: speedBase, removed:false};
+      game.falling.push(obj);
+    }
+
+    function startSpawning(){
+      clearInterval(game.spawnInterval);
+      game.spawnInterval = setInterval(()=>{ spawnWord(); }, 900);
+    }
+
+    function stopSpawning(){ clearInterval(game.spawnInterval); game.spawnInterval = null; }
+
+    function gameLoop(){
+      const now = performance.now();
+      let last = game._lastTime || now;
+      const dt = Math.min(50, now - last); // cap dt
+      game._lastTime = now;
+
+      // move words
+      for(let i=game.falling.length-1;i>=0;i--){
+        const f = game.falling[i];
+        if(f.removed) continue;
+        f.y += (f.speed * dt / 1000);
+        f.el.style.top = f.y + 'px';
+        // check collision with red line
+        const redTop = redlineEl.getBoundingClientRect().top - playArea.getBoundingClientRect().top;
+        if(f.y + f.el.offsetHeight >= redTop){
+          // hit the red line -> lose
+          endGame(true);
+          return; // stop loop
+        }
+        // remove off-screen (shouldn't happen) but keep safe
+        if(f.y > playArea.clientHeight + 40){
+          f.el.remove(); game.falling.splice(i,1);
+        }
+      }
+
+      game.animationFrame = requestAnimationFrame(gameLoop);
+    }
+
+    function startGame(){
+      if(game.running) return;
+      game.running = true;
+      game.score = 0; game.streak = 0; game.typed = 0; game.correct = 0; game.bestStreak = game.bestStreak || 0; game.level = 1;
+      updateHUD();
+      startSpawning();
+      game._lastTime = performance.now();
+      if(game.animationFrame) cancelAnimationFrame(game.animationFrame);
+      game.animationFrame = requestAnimationFrame(gameLoop);
+      input.disabled = false; input.focus();
+    }
+
+    function pauseGame(){
+      game.running = false;
+      stopSpawning();
+      if(game.animationFrame) cancelAnimationFrame(game.animationFrame);
+      game.animationFrame = null;
+      input.disabled = true;
+    }
+
+    function endGame(hit=false){
+      pauseGame();
+      // clear falling words visually
+      game.falling.forEach(f=>{ try{ f.el.remove(); }catch(e){} });
+      game.falling = [];
+      game.wordIndex = 0;
+      updateHUD();
+      if(hit){
+        alert(`Oh no — a word hit the red line!
+Score: ${game.score}
+Best streak: ${game.bestStreak}`);
+      }
+    }
+
+    function removeFalling(f){
+      f.removed = true;
+      try{ f.el.remove(); }catch(e){}
+      const idx = game.falling.indexOf(f); if(idx>=0) game.falling.splice(idx,1);
+    }
+
+    function handleSubmit(text){
+      const trimmed = text.trim(); if(!trimmed) return;
+      game.typed += 1;
+      // find a matching falling word (exact match)
+      const found = game.falling.find(f => f.text.toLowerCase() === trimmed.toLowerCase());
+      if(found){
+        // correct
+        game.correct += 1; game.score += 10 + game.streak*2; game.streak += 1; if(game.streak>game.bestStreak) game.bestStreak = game.streak;
+        // jump animation
+        const jumper = document.getElementById('jumper');
+        jumper.style.animation = 'none'; void jumper.offsetWidth; jumper.style.animation = 'jump 700ms cubic-bezier(.22,.9,.35,1)';
+        setTimeout(()=>{ jumper.style.animation = 'none'; },700);
+        removeFalling(found);
       } else {
-        wrongTyped();
+        // wrong
+        game.streak = 0; game.score = Math.max(0, game.score - 2);
       }
       input.value = '';
       updateHUD();
@@ -303,97 +331,34 @@ n    };
 
     input.addEventListener('keydown', (e)=>{
       if(e.key === 'Enter' || e.key === ' '){
-        e.preventDefault();
-        submitWord(input.value);
+        e.preventDefault(); handleSubmit(input.value);
       }
     });
 
-    startBtn.addEventListener('click', ()=>{
-      if(!game.running){
-        startGame();
-        startBtn.textContent = 'Pause';
-      } else {
-        pauseGame();
-        startBtn.textContent = 'Start';
-      }
-    });
+    startBtn.addEventListener('click', ()=>{ startGame(); });
+    stopBtn.addEventListener('click', ()=>{ pauseGame(); });
 
-    modeBtn.addEventListener('click', ()=>{
-      if(game.mode === 'endless'){
-        game.mode = 'timed';
-        modeBtn.textContent = 'Mode: Timed';
-      } else {
-        game.mode = 'endless';
-        modeBtn.textContent = 'Mode: Endless';
-      }
-    });
+    applyWords.addEventListener('click', ()=>{ applyWordPool(); });
+    resetWords.addEventListener('click', ()=>{ resetCustom(); });
 
-    timerRange.addEventListener('input', ()=>{ timerLabel.textContent = timerRange.value; game.timer = Number(timerRange.value); game.timeLeft = game.timer; });
+    spawnRange.addEventListener('input', ()=>{ game.spawnMax = Number(spawnRange.value); spawnLabel.textContent = spawnRange.value; });
+    spawnLabel.textContent = spawnRange.value; game.spawnMax = Number(spawnRange.value);
 
-    applyWords.addEventListener('click', ()=>{ setWordsFromCustom(); updateHUD(); });
-    resetWords.addEventListener('click', ()=>{ resetCustom(); updateHUD(); });
-    exportBtn.addEventListener('click', ()=>{
-      const txt = `SkyType score — Score:${game.score} Streak:${game.bestStreak} Typed:${game.typed} Accuracy:${game.typed?Math.round((game.correct/game.typed)*100):100}%`;
-      navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt).then(()=>alert('Score copied!')) : prompt('Copy this score:',txt);
-    });
-
-    function startGame(){
-      // init
-      game.running = true;
-      game.score = 0; game.streak = 0; game.typed = 0; game.correct = 0; game.bestStreak = 0;
-      game.level = 1; levelLabel.textContent = game.level;
-      game.timer = Number(timerRange.value); game.timeLeft = game.timer;
-      // set words
-      setWordsFromCustom();
-      if(!game.wordsPool) game.wordsPool = defaultWordsByLevel[game.level];
-      renderWords();
-      input.disabled = false; input.focus();
-      updateHUD();
-
-      if(game.mode === 'timed'){
-        clearInterval(game.interval);
-        game.interval = setInterval(()=>{
-          game.timeLeft -= 1;
-          if(game.timeLeft<=0){ endGame(); }
-          updateHUD();
-        },1000);
-      }
-
-      // level progression loop
-      game.loopInterval = setInterval(()=>{
-        // simple rule: increase level every 40 points
-        if(game.score > 0 && game.score % 40 === 0){
-          const newLevel = Math.min(4, 1 + Math.floor(game.score/40));
-          if(newLevel !== game.level){ game.level = newLevel; levelLabel.textContent = game.level; }
-        }
-        updateHUD();
-      },500);
+    function updateHUD(){
+      scoreEl.textContent = 'Score: '+game.score;
+      streakEl.textContent = game.streak;
+      accuracyEl.textContent = game.typed? Math.round((game.correct/game.typed)*100)+'%':'100%';
+      bestStreakEl.textContent = game.bestStreak;
+      typedCountEl.textContent = game.typed;
+      levelLabel.textContent = game.level;
     }
 
-    function pauseGame(){
-      game.running = false;
-      clearInterval(game.interval);
-      clearInterval(game.loopInterval);
-      input.disabled = true;
-    }
-
-    function endGame(){
-      pauseGame();
-      alert(`Game over! Score: ${game.score}\nBest streak: ${game.bestStreak}\nAccuracy: ${game.typed?Math.round((game.correct/game.typed)*100):100}%`);
-      startBtn.textContent = 'Start';
-    }
-
-    // quick init
+    // init
     resetCustom();
-    renderWords();
     updateHUD();
 
-    // keyboard shortcut
-    window.addEventListener('keydown', (e)=>{
-      if(e.key === 'Tab'){
-        e.preventDefault(); input.focus();
-      }
-    });
+    // keyboard quick focus
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Tab'){ e.preventDefault(); input.focus(); } });
   </script>
 </body>
 </html>
